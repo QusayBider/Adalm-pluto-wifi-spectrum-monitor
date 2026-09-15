@@ -14,7 +14,7 @@ signals, and shows how activity changes over time in a live heatmap.
 > ADALM-PLUTO is used exclusively as a receiver; no transmit functionality is
 > configured or implemented.
 
-🌐 [Open the full HTML documentation](https://YOUR_USERNAME.github.io/adalm-pluto-wifi-spectrum-monitor/)
+🌐 [Open the full HTML documentation](https://QusayBider.github.io/adalm-pluto-wifi-spectrum-monitor/)
 
 ## Features
 
