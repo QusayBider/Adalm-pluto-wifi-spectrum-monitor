@@ -14,8 +14,9 @@ signals, and shows how activity changes over time in a live heatmap.
 > ADALM-PLUTO is used exclusively as a receiver; no transmit functionality is
 > configured or implemented.
 
-🌐 [Open the full HTML documentation]([https://QusayBider.github.io/adalm-pluto-wifi-spectrum-monitor/](https://qusaybider.github.io/Adalm-pluto-wifi-spectrum-monitor/))
-
+<a href="https://qusaybider.github.io/Adalm-pluto-wifi-spectrum-monitor/" target="_blank">
+  🌐 Open the full HTML documentation
+</a>
 ## Features
 
 - Full-band 2400–2500 MHz sensing with 100 % frequency coverage
