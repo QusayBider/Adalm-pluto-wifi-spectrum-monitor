@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADALM-PLUTO Wi-Fi Spectrum Monitor</title>
+<meta name="description" content="Part 1 of a university SDR project: receive-only, energy-based monitoring of the 2400–2500 MHz band with an ADALM-PLUTO.">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --text: #1d232b;
+    --muted: #5b6573;
+    --border: #dde1e7;
+    --accent: #1f5fae;
+    --accent-soft: #e8f0fa;
+    --code-bg: #1e242c;
+    --code-text: #e6e9ee;
+    --inline-code-bg: #eef1f5;
+    --note-bg: #e8f0fa;
+    --note-border: #1f5fae;
+    --warn-bg: #fff6e0;
+    --warn-border: #c98a00;
+    --ok-bg: #e9f6ee;
+    --ok-border: #2e8b57;
+    --radius: 8px;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181d;
+      --surface: #1b2027;
+      --text: #e3e7ec;
+      --muted: #9aa4b1;
+      --border: #2e3540;
+      --accent: #6aa5ec;
+      --accent-soft: #1d2a3a;
+      --code-bg: #0f1216;
+      --code-text: #e3e7ec;
+      --inline-code-bg: #262d36;
+      --note-bg: #17263a;
+      --note-border: #6aa5ec;
+      --warn-bg: #2d2412;
+      --warn-border: #d9a441;
+      --ok-bg: #16281e;
+      --ok-border: #5fbf86;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+
+  header.page-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  header.page-header .container { padding-top: 32px; padding-bottom: 24px; }
+  header h1 { margin: 0 0 8px; font-size: 2rem; line-height: 1.25; }
+  header .subtitle { margin: 0; color: var(--muted); font-size: 1.05rem; }
+  .badges { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    font-size: 0.8rem; padding: 2px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--accent-soft); color: var(--text);
+  }
+
+  h2 {
+    font-size: 1.5rem; margin: 0 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.15rem; margin: 24px 0 8px; }
+  h4 { font-size: 1rem; margin: 16px 0 6px; }
+  p { margin: 8px 0; }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3px 0; }
+
+  section.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 0 0 20px;
+    scroll-margin-top: 12px;
+  }
+
+  nav.toc {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 24px; margin: 16px 0 20px;
+  }
+  nav.toc h2 { border: none; margin-bottom: 6px; }
+  nav.toc ol {
+    columns: 2; column-gap: 32px; margin: 0; padding-left: 1.4em;
+  }
+  nav.toc li { break-inside: avoid; }
+
+  code {
+    font-family: var(--mono); font-size: 0.9em;
+    background: var(--inline-code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-text);
+    font-family: var(--mono); font-size: 0.88rem; line-height: 1.5;
+    padding: 12px 16px; border-radius: 6px; overflow-x: auto; margin: 6px 0 14px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  .cmd-label {
+    display: inline-block; margin-top: 8px; font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted);
+  }
+  pre.diagram { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .comment { color: #8d99a8; }
+
+  .table-wrap { overflow-x: auto; margin: 8px 0 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+  th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); font-weight: 600; }
+
+  .callout {
+    border-left: 4px solid; border-radius: 6px; padding: 10px 14px; margin: 12px 0;
+  }
+  .callout.note { background: var(--note-bg); border-color: var(--note-border); }
+  .callout.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .callout.ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  .callout > :first-child { margin-top: 0; }
+  .callout > :last-child { margin-bottom: 0; }
+
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px;
+  }
+  .feature {
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--bg);
+  }
+  .feature strong { display: block; }
+  .feature span { color: var(--muted); font-size: 0.9rem; }
+
+  .req-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+  }
+  .req-grid > div { border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+  .req-grid h4 { margin-top: 0; }
+  .req-grid ul { margin: 0; }
+
+  .step { border-top: 1px dashed var(--border); padding-top: 4px; }
+  .step:first-of-type { border-top: none; }
+
+  .primary-command {
+    font-family: var(--mono); font-size: 1.3rem; text-align: center;
+    background: var(--code-bg); color: var(--code-text);
+    border-radius: 6px; padding: 14px; margin: 10px 0 16px;
+  }
+
+  footer { color: var(--muted); font-size: 0.9rem; text-align: center; margin-top: 12px; }
+
+  @media (max-width: 700px) {
+    header h1 { font-size: 1.55rem; }
+    section.card { padding: 16px; }
+    nav.toc ol { columns: 1; }
+    pre { font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <h1>ADALM-PLUTO 2.4 GHz Wi-Fi Spectrum Monitor</h1>
+    <p class="subtitle">Part 1 of a university SDR project: online, energy-based monitoring of the complete 2400–2500 MHz band.</p>
+    <div class="badges">
+      <span class="badge">Receive-only</span>
+      <span class="badge">ADALM-PLUTO</span>
+      <span class="badge">WSL2 Ubuntu</span>
+      <span class="badge">Python · pyadi-iio</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="callout note">
+    <p><strong>README.md</strong> is the primary documentation rendered directly by GitHub.
+    This HTML file is provided as a standalone formatted version.</p>
+  </div>
+
+  <nav class="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Project Overview</a></li>
+      <li><a href="#features">Main Features</a></li>
+      <li><a href="#architecture">System Architecture</a></li>
+      <li><a href="#structure">Project Structure</a></li>
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#setup">Setup on a New Computer</a></li>
+      <li><a href="#pluto-uri">Pluto URI</a></li>
+      <li><a href="#running">Running the Project</a></li>
+      <li><a href="#outputs">Generated Output</a></li>
+      <li><a href="#method">Technical Method</a></li>
+      <li><a href="#limitations">Important Scientific Limitations</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+      <li><a href="#restart">Starting the Project Again Later</a></li>
+      <li><a href="#quick-start">Quick Start</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="overview">
+    <h2>Project Overview</h2>
+    <p>This is <strong>Part 1</strong> of a university software-defined radio (SDR) project.
+    The system performs online, energy-based monitoring of the complete
+    2400–2500 MHz (2.4 GHz ISM) band with an ADALM-PLUTO SDR:</p>
+    <ul>
+      <li>live monitoring of 2400–2500 MHz</li>
+      <li>full-band spectrum sensing</li>
+      <li>Wi-Fi channel energy analysis (channels 1–13)</li>
+      <li>channel-center candidate detection</li>
+      <li>temporal candidate stabilization</li>
+      <li>time-frequency heatmap</li>
+    </ul>
+    <div class="callout warn">
+      <p><strong>Receive-only.</strong> This software performs <strong>no RF transmission</strong>.
+      The ADALM-PLUTO is used exclusively as a receiver; no transmit functionality is configured or implemented.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="features">
+    <h2>Main Features</h2>
+    <div class="feature-grid">
+      <div class="feature"><strong>ADALM-PLUTO RX</strong><span>pyadi-iio over USB, fixed manual gain (30 dB)</span></div>
+      <div class="feature"><strong>IQ capture</strong><span>20 MS/s, 16384 complex samples per buffer</span></div>
+      <div class="feature"><strong>FFT</strong><span>DC removal, Hann window, relative power in dB</span></div>
+      <div class="feature"><strong>Average Spectrum</strong><span>20 captures per LO step, averaged in linear power</span></div>
+      <div class="feature"><strong>Max Hold</strong><span>Per-bin maximum over the same captures</span></div>
+      <div class="feature"><strong>Full 2400–2500 MHz sweep</strong><span>8 overlapping LO steps, 100 % coverage</span></div>
+      <div class="feature"><strong>Spectrum stitching</strong><span>DC and edge exclusion, 5 kHz common grid</span></div>
+      <div class="feature"><strong>Wi-Fi energy occupancy</strong><span>Noise-floor based, per 20 MHz channel window</span></div>
+      <div class="feature"><strong>Center candidate detection</strong><span>Center score, local maxima, non-maximum suppression</span></div>
+      <div class="feature"><strong>Temporal stable candidate</strong><span>Scores averaged over the last 5 sweeps</span></div>
+      <div class="feature"><strong>Live spectrum</strong><span>Updated after every sweep</span></div>
+      <div class="feature"><strong>Heatmap</strong><span>Time-frequency activity over repeated sweeps</span></div>
+      <div class="feature"><strong>CSV / NPZ logging</strong><span>UTC timestamps; Ctrl+C always saves completed sweeps</span></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="architecture">
+    <h2>System Architecture</h2>
+<pre class="diagram"><code>ADALM-PLUTO (USB, receive-only)          src/pluto_receiver.py
+     ↓
+IQ Samples
+     ↓
+FFT / Relative Power                     src/spectrum.py
+     ↓
+Overlapping Frequency Sweep              src/sweep.py
+     ↓
+2400–2500 MHz Spectrum                   (stitched, linear power + dB)
+     ↓
+ ┌───────────────┬──────────────────┐
+ ↓               ↓                  ↓
+Channel       Temporal           Heatmap
+Analysis      Candidates         History
+(src/channel_detector.py)        (src/heatmap.py)</code></pre>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Module</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>main.py</code></td><td>Menu / command-line entry point; calls the scripts below</td></tr>
+          <tr><td><code>src/config.py</code></td><td>All settings (connection, receiver, sweep, detection, plotting)</td></tr>
+          <tr><td><code>src/pluto_receiver.py</code></td><td><code>PlutoReceiver</code>: connect, configure, receive IQ, verify gain. No DSP</td></tr>
+          <tr><td><code>src/spectrum.py</code></td><td>Hann window, FFT, linear power, average / max hold, valid-bin mask</td></tr>
+          <tr><td><code>src/sweep.py</code></td><td><code>SpectrumSweeper</code> (LO steps) and <code>stitch_segments()</code> onto a 5 kHz grid</td></tr>
+          <tr><td><code>src/channel_detector.py</code></td><td>Noise floor, energy occupancy, center candidates, temporal tracker</td></tr>
+          <tr><td><code>src/heatmap.py</code></td><td><code>SpectrumHistory</code>, occupancy records, NPZ/CSV history files</td></tr>
+          <tr><td><code>src/utils.py</code></td><td>Figure saving and plot-window helpers</td></tr>
+          <tr><td><code>scripts/</code></td><td>Stand-alone test and monitoring programs (also used by <code>main.py</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="structure">
+    <h2>Project Structure</h2>
+<pre><code>WiFi_Channel_Sensing/
+│
+├── main.py                       Entry point (menu and --mode)
+├── README.md                     Primary documentation (GitHub)
+├── README.html                   This standalone documentation page
+├── requirements.txt              pyadi-iio, numpy, matplotlib
+├── .gitignore
+│
+├── src/
+│   ├── __init__.py
+│   ├── config.py                 All settings (including PLUTO_URI)
+│   ├── pluto_receiver.py         Hardware access (receive-only)
+│   ├── spectrum.py               FFT / power / average / max hold / masks
+│   ├── sweep.py                  LO sweep and stitching
+│   ├── channel_detector.py       Energy occupancy, center and stable candidates
+│   ├── heatmap.py                Spectrum and occupancy history
+│   └── utils.py                  Figure helpers
+│
+├── scripts/
+│   ├── __init__.py               Makes `python -m scripts.&lt;name&gt;` reliable
+│   ├── test_pluto.py
+│   ├── test_spectrum.py
+│   ├── test_full_sweep.py
+│   ├── test_channel_detection.py
+│   └── live_monitor.py
+│
+├── data/
+│   ├── raw/
+│   └── processed/                NPZ and CSV results (generated)
+│
+└── results/
+    ├── figures/                  PNG figures (generated)
+    └── logs/</code></pre>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="requirements">
+    <h2>Requirements</h2>
+    <div class="req-grid">
+      <div>
+        <h4>Windows</h4>
+        <ul>
+          <li>Windows 10 or 11 (64-bit)</li>
+          <li>WSL2</li>
+          <li>Ubuntu under WSL</li>
+          <li>usbipd-win</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Linux / WSL (apt)</h4>
+        <ul>
+          <li><code>python3</code></li>
+          <li><code>python3-pip</code></li>
+          <li><code>python3-venv</code></li>
+          <li><code>libiio-utils</code></li>
+          <li><code>usbutils</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Python (<code>requirements.txt</code>)</h4>
+        <ul>
+          <li><code>pyadi-iio</code> (installs the <code>pylibiio</code> / <code>iio</code> bindings)</li>
+          <li><code>numpy</code></li>
+          <li><code>matplotlib</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Hardware</h4>
+        <ul>
+          <li>ADALM-PLUTO SDR</li>
+          <li>USB data cable</li>
+        </ul>
+      </div>
+    </div>
+    <p><code>libiio</code> is a C library installed with apt; pip cannot install it.
+    <code>pyadi-iio</code> loads it through its <code>pylibiio</code> bindings, so both are needed.</p>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="setup">
+    <h2>Setup on a New Computer</h2>
+    <p>Follow steps A–H once per computer. Nothing is assumed to be installed.
+    <strong>PowerShell (Administrator)</strong> commands run on Windows;
+    <strong>Ubuntu</strong> commands run inside the WSL Ubuntu terminal.</p>
+
+    <div class="step" id="setup-a">
+      <h3>A. Windows requirements</h3>
+      <p>You need Windows 10/11, WSL2, Ubuntu under WSL, usbipd-win and an ADALM-PLUTO connected by USB (use a data cable).</p>
+
+      <span class="cmd-label">PowerShell (Administrator) — install WSL2 and Ubuntu</span>
+<pre><code>wsl --install</code></pre>
+      <span class="cmd-label">PowerShell (Administrator) — if WSL is already installed</span>
+<pre><code>wsl --update</code></pre>
+      <div class="callout note">
+        <p>After a first-time WSL installation <strong>restart Windows</strong>. Then open <em>Ubuntu</em> from the Start menu and create a Linux user name and password when asked.</p>
+      </div>
+
+      <span class="cmd-label">PowerShell (Administrator) — install usbipd-win</span>
+<pre><code>winget install --interactive --exact dorssel.usbipd-win</code></pre>
+      <p>Close and reopen PowerShell afterwards so the <code>usbipd</code> command is found.
+      Open PowerShell <strong>as Administrator</strong> (right-click → <em>Run as administrator</em>) whenever you share USB devices with WSL.</p>
+    </div>
+
+    <div class="step" id="setup-b">
+      <h3>B. Connect the ADALM-PLUTO to WSL</h3>
+      <p>WSL does not see USB devices plugged into Windows automatically; they must be attached with usbipd.</p>
+      <ol>
+        <li>Plug in the ADALM-PLUTO and <strong>start Ubuntu</strong> (keep its terminal open).</li>
+        <li>List USB devices and find the ADALM-PLUTO. Its VID:PID is normally <strong><code>0456:b673</code></strong>. Note the <strong>BUSID</strong> in the first column (for example <code>2-3</code>).
+          <br><span class="cmd-label">PowerShell (Administrator)</span>
+<pre><code>usbipd list</code></pre></li>
+        <li>Share the device (needed once per device and USB port):
+<pre><code>usbipd bind --busid &lt;BUSID&gt;</code></pre></li>
+        <li>Attach it to WSL (Ubuntu must be running):
+<pre><code>usbipd attach --wsl --busid &lt;BUSID&gt;</code></pre></li>
+        <li>Confirm the device is visible.
+          <br><span class="cmd-label">Ubuntu</span>
+<pre><code>lsusb</code></pre>
+          Expected line (bus and device numbers vary):
+<pre><code>Bus 001 Device 002: ID 0456:b673 Analog Devices, Inc. LibIIO based AD9363 Software Defined Radio [ADALM-PLUTO]</code></pre>
+          If <code>lsusb</code> is not found yet, install the packages in step C first.</li>
+      </ol>
+      <div class="callout warn">
+        <p><code>&lt;BUSID&gt;</code> is machine-specific. <strong>Never copy another computer's BUSID</strong> — always read it from <code>usbipd list</code>. While attached, Windows itself cannot use the device.</p>
+      </div>
+    </div>
+
+    <div class="step" id="setup-c">
+      <h3>C. Ubuntu system packages</h3>
+      <span class="cmd-label">Ubuntu</span>
+<pre><code>sudo apt update
+
+sudo apt install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    libiio-utils \
+    usbutils</code></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Package</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>python3</code></td><td>Python runtime</td></tr>
+            <tr><td><code>python3-pip</code></td><td>Python package installer</td></tr>
+            <tr><td><code>python3-venv</code></td><td>Virtual environment support</td></tr>
+            <tr><td><code>libiio-utils</code></td><td>libiio library and tools (<code>iio_info</code>) to discover and talk to IIO devices such as the Pluto</td></tr>
+            <tr><td><code>usbutils</code></td><td>Provides <code>lsusb</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="cmd-label">Ubuntu — optional</span>
+<pre><code>sudo apt install -y git          <span class="comment"># only if `git --version` fails (needed in step E)</span>
+sudo apt install -y python3-tk   <span class="comment"># plot windows through WSLg; PNG files are saved either way</span></code></pre>
+    </div>
+
+    <div class="step" id="setup-d">
+      <h3>D. Verify the Pluto from WSL</h3>
+      <span class="cmd-label">Ubuntu</span>
+<pre><code>lsusb
+iio_info -S usb</code></pre>
+      <p><code>iio_info -S usb</code> should list an ADALM-PLUTO context with its URI in square brackets, for example:</p>
+<pre><code>Available contexts:
+	0: 0456:b673 (Analog Devices Inc. PlutoSDR (ADALM-PLUTO)), serial=... [usb:1.2.5]</code></pre>
+      <p>Configure this URI in <code>src/config.py</code> — see <a href="#pluto-uri">Pluto URI</a>.
+      If the Pluto appears only with <code>sudo iio_info -S usb</code>, see <a href="#troubleshooting">Troubleshooting</a>.</p>
+    </div>
+
+    <div class="step" id="setup-e">
+      <h3>E. Clone the repository</h3>
+      <p>Keep the project inside the Linux file system (not under <code>/mnt/c</code>).</p>
+      <span class="cmd-label">Ubuntu</span>
+<pre><code>cd ~
+git clone &lt;REPOSITORY_URL&gt;
+cd WiFi_Channel_Sensing</code></pre>
+      <p>Replace <code>&lt;REPOSITORY_URL&gt;</code> with the URL of this repository.</p>
+    </div>
+
+    <div class="step" id="setup-f">
+      <h3>F. Create the Python virtual environment</h3>
+      <span class="cmd-label">Ubuntu, inside ~/WiFi_Channel_Sensing</span>
+<pre><code>python3 -m venv .venv
+
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+
+python -m pip install -r requirements.txt</code></pre>
+      <p>After activation the prompt normally begins with <strong><code>(.venv)</code></strong>.
+      <code>.venv</code> is not part of the repository, so it must be created on every new computer.
+      <code>requirements.txt</code> installs <code>pyadi-iio</code> (which also installs the <code>pylibiio</code> bindings, the <code>iio</code> module), <code>numpy</code> and <code>matplotlib</code>.
+      In VS Code (WSL extension) select <code>.venv/bin/python</code> as the interpreter.</p>
+    </div>
+
+    <div class="step" id="setup-g">
+      <h3>G. Verify the Python dependencies</h3>
+      <span class="cmd-label">Ubuntu, with (.venv) active</span>
+<pre><code>python -c "import iio; print('iio OK')"
+
+python -c "import adi; print('pyadi-iio OK')"</code></pre>
+      <p>If both print <code>OK</code>, the Python environment is ready.</p>
+    </div>
+
+    <div class="step" id="setup-h">
+      <h3>H. First hardware test</h3>
+      <span class="cmd-label">Ubuntu, with (.venv) active</span>
+<pre><code>python -m scripts.test_pluto</code></pre>
+      <p>Expected type of result (sample values differ every time):</p>
+<pre><code>Connecting to ADALM-PLUTO...
+URI: usb:...
+Connected successfully.
+Configured: LO 2437.000 MHz, 20.0 MS/s, buffer 16384
+Samples received: 16384
+First 5 IQ samples:
+[...]</code></pre>
+      <div class="callout warn">
+        <p><strong>If this fails, do not continue</strong> to spectrum monitoring — fix the connection first (see <a href="#troubleshooting">Troubleshooting</a>).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="pluto-uri">
+    <h2>Pluto URI</h2>
+    <div class="callout warn">
+      <p><strong>The BUSID and the USB URI are MACHINE-SPECIFIC.</strong>
+      <code>usb:1.2.5</code> is only an example. The URI is different on other computers and can change after reconnecting the device.</p>
+    </div>
+    <p>Run the following command and use the URI shown in square brackets on <em>your</em> machine:</p>
+<pre><code>iio_info -S usb</code></pre>
+    <p>The program connects to the URI configured in <code>src/config.py</code>:</p>
+<pre><code>PLUTO_URI = "usb:..."</code></pre>
+    <p>Set it to the discovered URI, e.g. <code>PLUTO_URI = "usb:1.2.5"</code>.
+    (<code>PLUTO_URI = "usb:"</code> selects the only connected USB Pluto automatically and does not need updating after reconnects.)</p>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="running">
+    <h2>Running the Project</h2>
+    <p>Always run from the project root with the virtual environment active.</p>
+
+    <h3>Main program</h3>
+    <div class="primary-command">python main.py</div>
+<pre><code>============================================
+ ADALM-PLUTO 2.4 GHz Wi-Fi Spectrum Monitor
+============================================
+
+1. Test Pluto connection
+2. Single full-band sweep
+3. Analyze saved spectrum
+4. Start live monitoring
+5. Exit</code></pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Option</th><th>What it does</th><th>Needs the Pluto</th></tr></thead>
+        <tbody>
+          <tr><td>1. Test Pluto connection</td><td>Connects and receives one IQ buffer</td><td>yes</td></tr>
+          <tr><td>2. Single full-band sweep</td><td>One 2400–2500 MHz sweep; saves <code>full_band_*.png</code> and <code>full_band_spectrum.npz</code></td><td>yes</td></tr>
+          <tr><td>3. Analyze saved spectrum</td><td>Channel table, <code>full_band_channels.png</code>, <code>channel_occupancy.csv</code> from the last sweep (run option 2 first)</td><td>no</td></tr>
+          <tr><td>4. Start live monitoring</td><td>30 repeated sweeps: live spectrum, heatmap, instant and stable candidates, history files. <strong>Ctrl+C</strong> stops early and saves</td><td>yes</td></tr>
+          <tr><td>5. Exit</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <span class="cmd-label">The same actions without the menu</span>
+<pre><code>python main.py --mode test
+python main.py --mode sweep
+python main.py --mode analyze
+python main.py --mode live</code></pre>
+
+    <p>During live monitoring each sweep prints a short block:</p>
+<pre><code>Sweep 5/30   (1.09 s, spectrum + heatmap updated)
+  Noise floor:       -38.3 dB
+  Energy windows:    [4, 5, 6, 7, 8, 9]
+  Instant candidate: [7]
+  Stable candidate:  [6]   (last 5)</code></pre>
+    <p>The number of sweeps and all other settings are in <code>src/config.py</code>.</p>
+
+    <h3>Developer commands</h3>
+    <p>Stand-alone scripts (the menu uses the same code):</p>
+<pre><code>python -m scripts.test_pluto               <span class="comment"># connection and IQ samples</span>
+python -m scripts.test_spectrum            <span class="comment"># channel 6: FFT, average, max hold, masks</span>
+python -m scripts.test_full_sweep          <span class="comment"># full-band sweep with detailed log</span>
+python -m scripts.test_channel_detection   <span class="comment"># channel analysis of the saved sweep</span>
+python -m scripts.live_monitor             <span class="comment"># live monitoring</span></code></pre>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="outputs">
+    <h2>Generated Output</h2>
+    <p>The programs create these files at runtime. They are ignored by Git (<code>.gitignore</code>),
+    so a freshly cloned repository contains only empty folders.</p>
+
+    <h3>Figures — <code>results/figures/</code></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Created by</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>results/figures/live_spectrum.png</code></td><td>live</td><td>Latest stitched full-band spectrum, noise floor, instant (dashed orange) and stable (solid purple) candidates; overwritten after every sweep</td></tr>
+          <tr><td><code>results/figures/live_heatmap.png</code></td><td>live</td><td>Time-frequency activity heatmap (frequency left→right, oldest sweep at top, color = relative power in dB); overwritten after every sweep</td></tr>
+          <tr><td><code>results/figures/full_band_spectrum.png</code></td><td>sweep</td><td>Single stitched 2400–2500 MHz average spectrum</td></tr>
+          <tr><td><code>results/figures/full_band_average_maxhold.png</code></td><td>sweep</td><td>Stitched average and max hold</td></tr>
+          <tr><td><code>results/figures/full_band_segments.png</code></td><td>sweep</td><td>Valid part of each LO segment before stitching (diagnostic)</td></tr>
+          <tr><td><code>results/figures/full_band_channels.png</code></td><td>analyze</td><td>Channel energy / candidate analysis: spectrum, noise floor, energy status per channel, center candidates</td></tr>
+          <tr><td><code>results/figures/channel6_*.png</code></td><td><code>test_spectrum</code></td><td>Single-channel diagnostic figures</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Processed data — <code>data/processed/</code></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Created by</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>data/processed/full_band_spectrum.npz</code></td><td>sweep</td><td>Numerical stitched spectrum: frequencies, average and max hold (linear and dB), capture settings</td></tr>
+          <tr><td><code>data/processed/channel_occupancy.csv</code></td><td>analyze</td><td>Per-channel metrics: powers, excess, active fraction, energy status, center score, candidate flag</td></tr>
+          <tr><td><code>data/processed/spectrum_history.npz</code></td><td>live</td><td>Spectrum history for repeated sweeps: <code>power_history_db</code> (sweeps × 20000 bins), UTC timestamps, noise floor per sweep, per-channel matrices, settings</td></tr>
+          <tr><td><code>data/processed/occupancy_history.csv</code></td><td>live</td><td>Channel history across live monitoring: timestamp, noise floor, energy-occupied channels, instant and stable candidates per sweep</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Without a plot window (normal under WSL without <code>python3-tk</code>), open the PNGs from Windows,
+    e.g. <code>explorer.exe results/figures</code>. The live PNG and CSV files are rewritten after every sweep
+    and can be viewed while monitoring runs.</p>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="method">
+    <h2>Technical Method</h2>
+<pre class="diagram"><code>IQ capture → Hann window → FFT → Power → averaging
+  → overlapping LO sweep → invalid-edge / DC masking → linear-power stitching
+  → channel analysis → temporal smoothing → heatmap</code></pre>
+    <ul>
+      <li><strong>Capture and FFT:</strong> 20 MS/s, FFT size 16384; per buffer the DC offset is removed, a Hann window applied and the power computed. 20 captures per LO center (after 2 discarded buffers) are averaged in linear power; max hold keeps the per-bin maximum.</li>
+      <li><strong>Sweep:</strong> LO centers 2408.5, 2416.5, 2433.5, 2441.5, 2458.5, 2466.5, 2483.5 and 2491.5 MHz with fixed manual RX gain.</li>
+      <li><strong>Masking:</strong> ±0.2 MHz around each LO and 1 MHz at each capture edge are excluded; the paired centers fill each other's excluded regions.</li>
+      <li><strong>Stitching:</strong> valid bins are averaged in linear power into 5 kHz cells over 2400–2500 MHz; overlapping segments are averaged (max hold: maximum).</li>
+      <li><strong>Noise floor:</strong> 20th percentile of the stitched spectrum.</li>
+      <li><strong>Energy occupancy:</strong> a channel window (center ±10 MHz) is energy-occupied if its median is ≥ 5 dB above the noise floor or ≥ 20 % of its bins are ≥ 6 dB above it.</li>
+      <li><strong>Center candidate:</strong> <code>score = max(core median − floor, 0) × core active fraction</code> over center ±8 MHz; local maximum, score ≥ 2.5, 15 MHz separation.</li>
+      <li><strong>Stable candidate (temporal smoothing):</strong> scores averaged over the last 5 sweeps, same rules, supported (score ≥ 2.5) in at least 3 of them.</li>
+      <li><strong>Heatmap:</strong> each completed sweep becomes one row of the time-frequency history.</li>
+    </ul>
+    <p>All thresholds are in <code>src/config.py</code>.</p>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="limitations">
+    <h2>Important Scientific Limitations</h2>
+    <div class="callout warn">
+      <ol>
+        <li><strong>Relative power only.</strong> Power is shown in relative dB, not calibrated dBm. The ADALM-PLUTO is not amplitude-calibrated; only differences between frequencies and sweeps with the same settings are meaningful.</li>
+        <li><strong>No simultaneous observation.</strong> The ADALM-PLUTO does not observe the entire 100 MHz band simultaneously; one capture covers about 20 MHz.</li>
+        <li><strong>Sequential sweeps.</strong> The 2400–2500 MHz band is measured using sequential, overlapping LO sweeps (about 1.1 s per sweep in the current configuration) that are stitched together. Different frequencies within one spectrum or heatmap row were measured at slightly different times.</li>
+        <li><strong>Bursty traffic.</strong> Wi-Fi is bursty, so RF activity may change during a single sweep, and overlapping segments may show different levels.</li>
+        <li><strong>Energy-based detection.</strong> Occupancy is detected from RF energy only. Bluetooth, microwave ovens, other ISM devices or receiver spurs in the same frequency range are detected in the same way. Because 2.4 GHz channel windows overlap (5 MHz spacing, about 20 MHz width), one signal can make several neighbouring channel windows energy-occupied.</li>
+        <li><strong>No packet decoding.</strong> No IEEE 802.11 packets are decoded.</li>
+        <li><strong>Center candidates are interpretations.</strong> A center candidate means that the broadband energy is consistent with a signal centered near a standard Wi-Fi channel frequency, not that an access point or its identity has been proven. Because 2.4 GHz channels overlap, networks closer than about 15 MHz may merge into one candidate, and energy centered between two channels can make the candidate alternate; temporal averaging reduces but does not remove this.</li>
+        <li><strong>Validation pending.</strong> Controlled validation using a router fixed to known channels has not yet been performed and remains an optional future validation experiment. Detection thresholds are initial experimental values.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="troubleshooting">
+    <h2>Troubleshooting</h2>
+    <p>Work through the checks in order: <code>lsusb</code> → <code>iio_info -S usb</code> → Python imports →
+    <code>python -m scripts.test_pluto</code>. The first failing check shows where the problem is.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Problem</th><th>Likely cause</th><th>Solution</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>usbipd</code> not found (PowerShell)</td>
+            <td>usbipd-win not installed, or PowerShell opened before installing it</td>
+            <td>Install usbipd-win (step A) and open a new PowerShell as Administrator</td>
+          </tr>
+          <tr>
+            <td><code>lsusb</code> does not show the Pluto</td>
+            <td>The USB device is not attached to WSL</td>
+            <td><code>usbipd list</code>, then <code>usbipd attach --wsl --busid &lt;BUSID&gt;</code>. The device must show <em>Attached</em>; Ubuntu must be running. If still missing, try another USB port or cable, then <code>bind</code> and <code>attach</code> again</td>
+          </tr>
+          <tr>
+            <td><code>lsusb</code> shows the Pluto but <code>iio_info -S usb</code> does not</td>
+            <td>libiio not installed, or no USB permission</td>
+            <td><code>sudo apt install libiio-utils</code>. If it works only with <code>sudo iio_info -S usb</code>, add the udev rule below and re-attach the device</td>
+          </tr>
+          <tr>
+            <td><code>import iio</code> fails</td>
+            <td>Virtual environment not active or requirements not installed</td>
+            <td>Check the prompt starts with <code>(.venv)</code>; otherwise <code>source .venv/bin/activate</code>, then <code>python -m pip install -r requirements.txt</code>. If the error mentions <code>libiio</code>, install <code>libiio-utils</code> (step C)</td>
+          </tr>
+          <tr>
+            <td><code>import adi</code> fails</td>
+            <td>pyadi-iio not installed in the active environment</td>
+            <td><code>source .venv/bin/activate</code>, then <code>python -m pip install -r requirements.txt</code></td>
+          </tr>
+          <tr>
+            <td>Connection to the Pluto URI fails ("Could not connect ... No device found")</td>
+            <td><code>PLUTO_URI</code> does not match the device</td>
+            <td>Run <code>iio_info -S usb</code> and set <code>PLUTO_URI</code> in <code>src/config.py</code> to the URI in square brackets</td>
+          </tr>
+          <tr>
+            <td>Matplotlib does not open a window</td>
+            <td>No GUI backend under WSL — not an error</td>
+            <td>All figures are still saved as PNG files in <code>results/figures/</code>. Optional plot windows through WSLg: <code>sudo apt install python3-tk</code></td>
+          </tr>
+          <tr>
+            <td>Permission or connection problems after reconnecting the Pluto</td>
+            <td>Device detached, re-enumerated or URI changed</td>
+            <td><code>usbipd detach --busid &lt;BUSID&gt;</code>, then <code>usbipd attach --wsl --busid &lt;BUSID&gt;</code>; check <code>lsusb</code> and <code>iio_info -S usb</code>; update <code>PLUTO_URI</code> if the URI changed. "Sweep failed ... No such device" during monitoring means the Pluto was disconnected; completed sweeps are still saved</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <span class="cmd-label">Ubuntu — udev rule for USB permission</span>
+<pre><code>echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="0456", ATTRS{idProduct}=="b673", MODE="0666"' \
+    | sudo tee /etc/udev/rules/53-adi-plutosdr-usb.rules
+sudo udevadm control --reload-rules</code></pre>
+
+    <span class="cmd-label">PowerShell (Administrator) — detach and re-attach</span>
+<pre><code>usbipd detach --busid &lt;BUSID&gt;
+usbipd attach --wsl --busid &lt;BUSID&gt;</code></pre>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="restart">
+    <h2>Starting the Project Again Later</h2>
+    <p>After rebooting Windows, restarting WSL (<code>wsl --shutdown</code>) or unplugging the ADALM-PLUTO,
+    the device must be attached to WSL again.</p>
+    <ol>
+      <li>Start Ubuntu.</li>
+      <li><span class="cmd-label">PowerShell (Administrator)</span>
+<pre><code>usbipd list
+usbipd attach --wsl --busid &lt;BUSID&gt;</code></pre>
+        If the device is listed as <em>Not shared</em> (e.g. after using a different USB port), bind it first:
+<pre><code>usbipd bind --busid &lt;BUSID&gt;</code></pre></li>
+      <li><span class="cmd-label">Ubuntu</span>
+<pre><code>lsusb
+iio_info -S usb</code></pre>
+        If the URI in square brackets changed, update <code>PLUTO_URI</code> in <code>src/config.py</code>.</li>
+      <li>Start the program:
+<pre><code>cd ~/WiFi_Channel_Sensing
+source .venv/bin/activate
+python main.py</code></pre></li>
+    </ol>
+  </section>
+
+  <!-- ===================================================================== -->
+  <section class="card" id="quick-start">
+    <h2>Quick Start</h2>
+    <p>For a computer where <a href="#setup">Setup on a New Computer</a> has already been completed.</p>
+
+    <span class="cmd-label">Windows PowerShell (Administrator)</span>
+<pre><code>usbipd list
+usbipd bind --busid &lt;BUSID&gt;          <span class="comment"># only if the Pluto is not shared yet</span>
+usbipd attach --wsl --busid &lt;BUSID&gt;</code></pre>
+
+    <span class="cmd-label">Ubuntu</span>
+<pre><code>lsusb
+iio_info -S usb                      <span class="comment"># update PLUTO_URI in src/config.py if the URI changed</span>
+
+cd ~/WiFi_Channel_Sensing
+source .venv/bin/activate
+
+python -m scripts.test_pluto
+python main.py</code></pre>
+
+    <div class="callout note">
+      <p><strong>Freshly cloned repository?</strong> <code>.venv</code> does not exist yet. Create it once before <code>source .venv/bin/activate</code>:</p>
+<pre><code>python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt</code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <p>README.md is the primary documentation rendered directly by GitHub.
+    This HTML file is provided as a standalone formatted version.</p>
+    <p>ADALM-PLUTO 2.4 GHz Wi-Fi Spectrum Monitor — Part 1, receive-only.</p>
+  </footer>
+
+</main>
+</body>
+</html>

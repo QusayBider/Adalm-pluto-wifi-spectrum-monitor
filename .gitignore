@@ -1,0 +1,91 @@
+# =============================================================================
+# WiFi_Channel_Sensing - ADALM-PLUTO 2.4 GHz Wi-Fi spectrum monitor
+# =============================================================================
+# Source code, documentation and requirements are tracked. Generated
+# measurement data, figures, logs and local environments are not.
+
+# -----------------------------------------------------------------------------
+# Python generated files
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# -----------------------------------------------------------------------------
+# Virtual environments
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/
+
+# -----------------------------------------------------------------------------
+# IDE / editor files
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+
+# -----------------------------------------------------------------------------
+# OS temporary files
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+# Windows download metadata created when copying files into WSL
+*:Zone.Identifier
+
+# -----------------------------------------------------------------------------
+# Environment variables / secrets
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# -----------------------------------------------------------------------------
+# Generated SDR experiment data (folders kept via .gitkeep)
+# -----------------------------------------------------------------------------
+# Use "folder/*" instead of "folder/": git cannot re-include a file whose
+# parent directory is ignored, so the .gitkeep exceptions would not work.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# -----------------------------------------------------------------------------
+# Generated plots and logs (folders kept via .gitkeep)
+# -----------------------------------------------------------------------------
+results/figures/*
+!results/figures/.gitkeep
+results/logs/*
+!results/logs/.gitkeep
+
+# -----------------------------------------------------------------------------
+# Generated data formats (anywhere in the repository)
+# -----------------------------------------------------------------------------
+*.npz
+*.npy
+*.csv
+*.log
+*.tmp
+*.bak
