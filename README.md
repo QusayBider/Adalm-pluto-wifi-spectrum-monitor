@@ -17,6 +17,7 @@ signals, and shows how activity changes over time in a live heatmap.
 <a href="https://qusaybider.github.io/Adalm-pluto-wifi-spectrum-monitor/" target="_blank">
   🌐 Open the full HTML documentation
 </a>
+
 ## Features
 
 - Full-band 2400–2500 MHz sensing with 100 % frequency coverage
